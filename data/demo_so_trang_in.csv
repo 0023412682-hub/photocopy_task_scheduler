@@ -1,0 +1,9 @@
+﻿Mã tác vụ,Khách hàng,Loại tác vụ,Thời điểm đến,Số trang bìa,Số trang màu,Số trang trắng đen,Độ ưu tiên,Trạng thái,burst_time tham khảo
+T001,Khách 1,In tài liệu,0,1,5,100,3,Đang chờ,37
+T002,Khách 2,In tài liệu,0,0,2,20,1,Đang chờ,8
+T003,Khách 3,In tài liệu,0,2,0,60,4,Đang chờ,22
+T004,Khách 4,In tài liệu,0,0,10,0,2,Đang chờ,10
+T005,Khách 5,In tài liệu,0,3,7,120,5,Đang chờ,49
+T006,Khách 6,In tài liệu,0,0,0,30,1,Đang chờ,9
+T007,Khách 7,In tài liệu,0,1,15,40,3,Đang chờ,29
+T008,Khách 8,In tài liệu,0,0,4,10,2,Đang chờ,7
