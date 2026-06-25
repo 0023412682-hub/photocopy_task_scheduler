@@ -306,11 +306,11 @@ class SyncFrame(tk.Frame):
         body.columnconfigure(3, weight=1)
 
         # --- ĐÃ THÊM width=20 VÀ ĐỔI THÀNH sticky="w" ---
-        tk.Label(body, text="Cơ chế đồng bộ", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 10, "bold")).grid(row=0, column=0, sticky="w", pady=7)
-        ttk.Combobox(body, textvariable=self.mechanism_var, values=["Producer - Consumer", "Mutex"], state="readonly", width=20).grid(row=0, column=1, sticky="w", padx=8, pady=7)
+        tk.Label(body, text="Cơ chế đồng bộ", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 12, "bold")).grid(row=0, column=0, sticky="w", pady=7)
+        ttk.Combobox(body, textvariable=self.mechanism_var, values=["Producer - Consumer", "Mutex"], state="readonly", width=20, font=("Arial", 12)).grid(row=0, column=1, sticky="w", padx=8, pady=7)
 
-        tk.Label(body, text="Sức chứa buffer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 10, "bold")).grid(row=0, column=2, sticky="w", pady=7)
-        tk.Entry(body, textvariable=self.buffer_size_var, width=10).grid(row=0, column=3, sticky="w", padx=8, pady=7)
+        tk.Label(body, text="Sức chứa buffer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 12, "bold")).grid(row=0, column=2, sticky="w", pady=7)
+        tk.Entry(body, textvariable=self.buffer_size_var, width=10, font=("Arial", 12)).grid(row=0, column=3, sticky="w", padx=8, pady=7)
 
         speed_options = [
             "Rất chậm (2000 ms)", 
@@ -321,11 +321,11 @@ class SyncFrame(tk.Frame):
         ]
 
         # --- ĐÃ THÊM width=20 VÀ ĐỔI THÀNH sticky="w" ---
-        tk.Label(body, text="Tốc độ Producer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 10, "bold")).grid(row=1, column=0, sticky="w", pady=7)
-        ttk.Combobox(body, textvariable=self.producer_speed_var, values=speed_options, state="readonly", width=20).grid(row=1, column=1, sticky="w", padx=8, pady=7)
+        tk.Label(body, text="Tốc độ Producer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 12, "bold")).grid(row=1, column=0, sticky="w", pady=7)
+        ttk.Combobox(body, textvariable=self.producer_speed_var, values=speed_options, state="readonly", width=20, font=("Arial", 12)).grid(row=1, column=1, sticky="w", padx=8, pady=7)
 
-        tk.Label(body, text="Tốc độ Consumer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 10, "bold")).grid(row=1, column=2, sticky="w", pady=7)
-        ttk.Combobox(body, textvariable=self.consumer_speed_var, values=speed_options, state="readonly", width=20).grid(row=1, column=3, sticky="w", padx=8, pady=7)
+        tk.Label(body, text="Tốc độ Consumer", bg=WHITE_COLOR, fg=TEXT_COLOR, font=("Arial", 12, "bold")).grid(row=1, column=2, sticky="w", pady=7)
+        ttk.Combobox(body, textvariable=self.consumer_speed_var, values=speed_options, state="readonly", width=20, font=("Arial", 12)).grid(row=1, column=3, sticky="w", padx=8, pady=7)
 
         btns = tk.Frame(body, bg=WHITE_COLOR)
         btns.grid(row=2, column=0, columnspan=4, sticky="w", pady=(14, 0))
@@ -397,9 +397,11 @@ class SyncFrame(tk.Frame):
         visual.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
         canvas_wrap = tk.Frame(visual, bg=WHITE_COLOR)
-        canvas_wrap.pack(fill="both", expand=True, padx=16, pady=12)
+        # ĐÃ SỬA: Chỉnh padx=0, pady=0 để xóa viền trắng thừa xung quanh
+        canvas_wrap.pack(fill="both", expand=True, padx=0, pady=0) 
 
-        self.buffer_canvas = tk.Canvas(canvas_wrap, height=210, bg=WHITE_COLOR, highlightthickness=0)
+        # ĐÃ SỬA: Giảm height từ 210 xuống 180 vì ta sẽ dịch đồ họa lên trên
+        self.buffer_canvas = tk.Canvas(canvas_wrap, height=180, bg=WHITE_COLOR, highlightthickness=0)
         self.buffer_scroll = ttk.Scrollbar(canvas_wrap, orient="horizontal", command=self.buffer_canvas.xview)
         
         self.buffer_canvas.configure(xscrollcommand=self.buffer_scroll.set)
@@ -689,31 +691,34 @@ class SyncFrame(tk.Frame):
     def draw_buffer(self):
         self.buffer_canvas.delete("all")
 
-        start_x = 230
-        y = 85
+        # --- Dịch chuyển toàn bộ đồ họa sang trái và lên trên ---
+        start_x = 160  # Giảm từ 230 xuống 160 (Kéo Buffer sát lề trái)
+        y = 45         # Giảm từ 85 xuống 45 (Kéo Buffer lên sát trần)
         slot_w = 86
         slot_h = 62
         gap = 12
 
-        self.buffer_canvas.create_text(90, 60, text="PRODUCER", fill=PRIMARY_COLOR, font=("Arial", 12, "bold"))
+        # --- PRODUCER (Dịch X giảm 40px, Y giảm 40px) ---
+        self.buffer_canvas.create_text(50, 20, text="PRODUCER", fill=PRIMARY_COLOR, font=("Arial", 12, "bold"))
         
-        # --- DRAW PRODUCER IMAGES ---
         p_img = self.load_image("Produced", (32, 32))
         if p_img:
-            self.buffer_canvas.create_image(115, 110, image=p_img)
-            self.buffer_canvas.create_text(70, 110, text="P1", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
-            self.buffer_canvas.create_image(115, 155, image=p_img)
-            self.buffer_canvas.create_text(70, 155, text="P2", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_image(75, 70, image=p_img)
+            self.buffer_canvas.create_text(30, 70, text="P1", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_image(75, 115, image=p_img)
+            self.buffer_canvas.create_text(30, 115, text="P2", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
         else:
-            self.buffer_canvas.create_text(90, 110, text="P1 👤", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
-            self.buffer_canvas.create_text(90, 155, text="P2 👤", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_text(50, 70, text="P1 👤", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_text(50, 115, text="P2 👤", fill=PRIMARY_COLOR, font=("Arial", 16, "bold"))
 
-        self.buffer_canvas.create_line(140, 110, start_x - 20, 110, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
-        self.buffer_canvas.create_line(140, 155, start_x - 20, 130, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
+        # Thu ngắn mũi tên Producer một chút để cân đối với khoảng cách mới
+        self.buffer_canvas.create_line(100, 70, start_x - 20, 70, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
+        self.buffer_canvas.create_line(100, 115, start_x - 20, 90, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
 
+        # --- BUFFER ---
         self.buffer_canvas.create_text(
             start_x + (slot_w + gap) * self.max_buffer_size / 2 - 20,
-            48,
+            15, # Đẩy chữ lên sát lề trên
             text=f"BUFFER (SỨC CHỨA: {self.max_buffer_size})",
             fill=PRIMARY_COLOR,
             font=("Arial", 12, "bold")
@@ -732,24 +737,25 @@ class SyncFrame(tk.Frame):
                 
             self.buffer_canvas.create_text(x + slot_w / 2, y + slot_h + 24, text=str(i + 1), fill=TEXT_COLOR, font=("Arial", 10, "bold"))
 
+        # --- CONSUMER (Các tính toán offset tự động thay đổi theo start_x và y mới) ---
         consumer_x = start_x + self.max_buffer_size * (slot_w + gap) + 40
-        self.buffer_canvas.create_text(consumer_x + 60, 60, text="CONSUMER", fill=PRIMARY_COLOR, font=("Arial", 12, "bold"))
+        self.buffer_canvas.create_text(consumer_x + 60, 20, text="CONSUMER", fill=PRIMARY_COLOR, font=("Arial", 12, "bold"))
         
-        # --- DRAW CONSUMER IMAGES ---
         c_img = self.load_image("Consumed", (32, 32))
         if c_img:
-            self.buffer_canvas.create_image(consumer_x + 25, 110, image=c_img)
-            self.buffer_canvas.create_text(consumer_x + 75, 110, text="C1", fill=PURPLE, font=("Arial", 16, "bold"))
-            self.buffer_canvas.create_image(consumer_x + 25, 155, image=c_img)
-            self.buffer_canvas.create_text(consumer_x + 75, 155, text="C2", fill=PURPLE, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_image(consumer_x + 25, 70, image=c_img)
+            self.buffer_canvas.create_text(consumer_x + 75, 70, text="C1", fill=PURPLE, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_image(consumer_x + 25, 115, image=c_img)
+            self.buffer_canvas.create_text(consumer_x + 75, 115, text="C2", fill=PURPLE, font=("Arial", 16, "bold"))
         else:
-            self.buffer_canvas.create_text(consumer_x + 60, 110, text="👤 C1", fill=PURPLE, font=("Arial", 16, "bold"))
-            self.buffer_canvas.create_text(consumer_x + 60, 155, text="👤 C2", fill=PURPLE, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_text(consumer_x + 60, 70, text="👤 C1", fill=PURPLE, font=("Arial", 16, "bold"))
+            self.buffer_canvas.create_text(consumer_x + 60, 115, text="👤 C2", fill=PURPLE, font=("Arial", 16, "bold"))
 
-        self.buffer_canvas.create_line(consumer_x, 110, consumer_x - 60, 110, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
-        self.buffer_canvas.create_line(consumer_x, 155, consumer_x - 60, 130, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
+        self.buffer_canvas.create_line(consumer_x, 70, consumer_x - 60, 70, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
+        self.buffer_canvas.create_line(consumer_x, 115, consumer_x - 60, 90, arrow=tk.LAST, fill=PRIMARY_COLOR, width=2)
 
-        legend_y = 195
+        # --- CHÚ THÍCH (Kéo lên mốc y=155) ---
+        legend_y = 155 
         self.buffer_canvas.create_rectangle(start_x, legend_y, start_x + 16, legend_y + 16, fill="#FEF3C7", outline="#F59E0B", width=1)
         self.buffer_canvas.create_text(start_x + 24, legend_y + 8, anchor="w", text="Ô đã có tác vụ", fill=TEXT_COLOR, font=("Arial", 9))
         
@@ -758,7 +764,8 @@ class SyncFrame(tk.Frame):
 
         max_x = consumer_x + 150
         
-        self.buffer_canvas.configure(scrollregion=(0, 0, max_x, 230))
+        # Giảm chiều cao vùng cuộn xuống 190 cho vừa khít
+        self.buffer_canvas.configure(scrollregion=(0, 0, max_x, 190))
 
     def update_conclusion(self):
         text = (

@@ -253,67 +253,73 @@ class SimulationFrame(tk.Frame):
         image_name,
         fallback_text,
         command,
-        size=(118, 36),
+        size=(136, 36),
         button_size=None,
         fallback_bg=PRIMARY_COLOR,
         fallback_fg=WHITE_COLOR,
     ):
+        """Tạo nút bằng Label để không xuất hiện khung mặc định của tk.Button.
+        Tất cả ảnh nút dùng cùng size để 3 nút bằng nhau.
+        """
         button_size = button_size or size
         photo = self.load_image(image_name, size)
         bg = parent.cget("bg") if hasattr(parent, "cget") else WHITE_COLOR
+
         if photo:
-            btn = tk.Button(
+            btn = tk.Label(
                 parent,
                 image=photo,
-                command=command,
                 bg=bg,
-                activebackground=bg,
                 relief=tk.FLAT,
                 bd=0,
                 borderwidth=0,
                 highlightthickness=0,
                 cursor="hand2",
-                takefocus=False,
                 padx=0,
                 pady=0,
-                overrelief=tk.FLAT,
             )
             btn.image = photo
-            btn._image_size = size
-            btn._button_size = button_size
-            return btn
+        else:
+            btn = tk.Label(
+                parent,
+                text=fallback_text,
+                bg=fallback_bg,
+                fg=fallback_fg,
+                font=("Arial", 11, "bold"),
+                relief=tk.FLAT,
+                bd=0,
+                borderwidth=0,
+                highlightthickness=0,
+                cursor="hand2",
+                padx=14,
+                pady=7,
+            )
 
-        return tk.Button(
-            parent,
-            text=fallback_text,
-            bg=fallback_bg,
-            fg=fallback_fg,
-            activebackground=fallback_bg,
-            activeforeground=fallback_fg,
-            font=("Arial", 11, "bold"),
-            relief=tk.FLAT,
-            bd=0,
-            borderwidth=0,
-            highlightthickness=0,
-            cursor="hand2",
-            command=command,
-            width=max(8, button_size[0] // 11),
-            height=max(1, button_size[1] // 24),
-            takefocus=False,
-        )
+        btn._image_size = size
+        btn._button_size = button_size
+        btn._button_command = command
+
+        def on_click(event, widget=btn):
+            if str(widget.cget("state")) == str(tk.DISABLED):
+                return
+            widget._button_command()
+
+        btn.bind("<Button-1>", on_click)
+        return btn
 
     def update_button_image(self, button, image_name, fallback_text=None, fallback_bg=None, fallback_fg=None):
-        size = getattr(button, "_image_size", (118, 36))
+        size = getattr(button, "_image_size", (136, 36))
         photo = self.load_image(image_name, size)
         if photo:
-            button.config(image=photo, text="")
+            bg = button.master.cget("bg") if getattr(button, "master", None) else WHITE_COLOR
+            button.config(image=photo, text="", bg=bg)
             button.image = photo
         elif fallback_text is not None:
             button.config(text=fallback_text, image="")
             if fallback_bg:
-                button.config(bg=fallback_bg, activebackground=fallback_bg)
+                button.config(bg=fallback_bg)
             if fallback_fg:
-                button.config(fg=fallback_fg, activeforeground=fallback_fg)
+                button.config(fg=fallback_fg)
 
     def section(self, parent, title, icon_file=None):
         box = tk.Frame(
@@ -515,39 +521,41 @@ class SimulationFrame(tk.Frame):
 
         btn_frame.pack()
 
+        control_button_size = (136, 36)
+
         self.run_button = self.make_image_button(
             btn_frame,
             "Run_Simulation",
             "▶ Chạy mô phỏng",
             self.run_simulation,
-            size=(146, 36),
-            button_size=(152, 42),
+            size=control_button_size,
+            button_size=control_button_size,
             fallback_bg="#16A34A",
             fallback_fg=WHITE_COLOR
         )
 
-        self.run_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.run_button.pack(side=tk.LEFT, padx=(0, 6))
 
         self.pause_button = self.make_image_button(
             btn_frame,
             "Pause",
             "Ⅱ  Tạm dừng",
             self.pause_or_resume,
-            size=(130, 36),
-            button_size=(136, 42),
+            size=control_button_size,
+            button_size=control_button_size,
             fallback_bg="#F97316",
             fallback_fg=WHITE_COLOR
         )
 
-        self.pause_button.pack(side=tk.LEFT, padx=(0, 8))
+        self.pause_button.pack(side=tk.LEFT, padx=(0, 6))
 
         self.reset_button = self.make_image_button(
             btn_frame,
             "Reset",
             "↺ Đặt lại",
             self.reset_simulation,
-            size=(118, 36),
-            button_size=(124, 42),
+            size=control_button_size,
+            button_size=control_button_size,
             fallback_bg="#DC2626",
             fallback_fg=WHITE_COLOR
         )
@@ -915,18 +923,24 @@ class SimulationFrame(tk.Frame):
                 font=("Arial", 34)
             ).pack(expand=True)
 
-        task_label = tk.Label(
+        progress_canvas = tk.Canvas(
             body,
-            text="Chưa chạy mô phỏng",
-            bg=bg,
-            fg=color,
-            font=("Arial", 10, "bold"),
-            height=1,
-            relief=tk.SOLID,
-            bd=1,
+            height=24,
+            bg=WHITE_COLOR,
+            highlightthickness=0,
+            bd=0,
         )
 
-        task_label.grid(row=0, column=1, sticky="ew", pady=(0, 6))
+        progress_canvas._progress_text = "Chưa chạy mô phỏng"
+        progress_canvas._progress_percent = 0
+        progress_canvas._progress_color = color
+
+        progress_canvas.grid(row=0, column=1, sticky="ew", pady=(0, 6))
+
+        progress_canvas.bind(
+            "<Configure>",
+            lambda event, canvas=progress_canvas: self.draw_progress_bar(canvas)
+        )
 
         progress_label = tk.Label(
             body,
@@ -982,7 +996,7 @@ class SimulationFrame(tk.Frame):
         self.algo_panels[key] = {
             "queue_frame": queue_frame,
             "queue_canvas": queue_canvas,
-            "task_label": task_label,
+            "progress_canvas": progress_canvas,
             "progress_label": progress_label,
             "elapsed_label": elapsed_label,
             "remain_label": remain_label,
@@ -1897,6 +1911,146 @@ class SimulationFrame(tk.Frame):
 
             self.draw_gantt()
 
+    def update_progress_bar(self, canvas, text, percent, color):
+        try:
+            percent = int(percent)
+        except Exception:
+            percent = 0
+
+        canvas._progress_text = text
+        canvas._progress_percent = max(0, min(100, percent))
+        canvas._progress_color = color
+
+        self.draw_progress_bar(canvas)
+
+
+    def draw_progress_bar(self, canvas):
+        width = max(canvas.winfo_width(), 1)
+        height = max(canvas.winfo_height(), 24)
+
+        text = getattr(canvas, "_progress_text", "Chưa chạy mô phỏng")
+        percent = max(0, min(100, int(getattr(canvas, "_progress_percent", 0))))
+        color = getattr(canvas, "_progress_color", PRIMARY_COLOR)
+
+        canvas.delete("all")
+
+        if width <= 2:
+            return
+
+        x1, y1 = 1, 1
+        x2, y2 = width - 1, height - 1
+
+        fill_width = x1 + int((x2 - x1) * percent / 100)
+
+        # Nền trắng + viền đen
+        canvas.create_rectangle(
+            x1,
+            y1,
+            x2,
+            y2,
+            fill=WHITE_COLOR,
+            outline="#111827",
+            width=1,
+        )
+
+        # Phần màu chạy theo %
+        if percent > 0:
+            canvas.create_rectangle(
+                x1 + 1,
+                y1 + 1,
+                max(x1 + 1, fill_width),
+                y2 - 1,
+                fill=color,
+                outline="",
+            )
+
+        # Vẽ lại viền phía trên để không bị màu che mất
+        canvas.create_rectangle(
+            x1,
+            y1,
+            x2,
+            y2,
+            outline="#111827",
+            width=1,
+        )
+
+        text_x = width // 2
+        text_y = height // 2
+        text_font = ("Arial", 11, "bold")
+
+        # Viền đen dày quanh chữ
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                if dx == 0 and dy == 0:
+                    continue
+
+                canvas.create_text(
+                    text_x + dx,
+                    text_y + dy,
+                    text=text,
+                    fill="#000000",
+                    font=text_font,
+                )
+
+        # Chữ chính màu trắng
+        canvas.create_text(
+            text_x,
+            text_y,
+            text=text,
+            fill="#FFFFFF",
+            font=text_font,
+        )
+    
+    def get_progress_display_block(self, gantt_chart, now):
+        """
+        Lấy block để hiển thị trên thanh tiến độ.
+        Ưu tiên block vừa kết thúc tại đúng thời điểm now để thấy được 100%
+        trước khi chuyển sang tác vụ kế tiếp.
+        """
+        if not gantt_chart:
+            return None
+
+        for block in reversed(gantt_chart):
+            task_id = str(self.safe_attr(block, "task_id", ""))
+            end = self.to_int(self.safe_attr(block, "end_time", 0), 0)
+
+            if task_id != "IDLE" and now == end:
+                return block
+
+        return self.find_current_block(gantt_chart, now)
+
+
+    def get_current_task_progress(self, result, block, now, key):
+        if block is None:
+            return "Đang chờ tác vụ", 0
+
+        task_id = str(self.safe_attr(block, "task_id", ""))
+
+        if task_id == "IDLE":
+            return "IDLE - Chưa có tác vụ đến", 0
+
+        task = next(
+            (
+                item for item in getattr(result, "tasks", []) or []
+                if str(self.safe_attr(item, "task_id", "")) == task_id
+            ),
+            self.task_lookup.get(task_id)
+        )
+
+        task_type = str(self.safe_attr(task, "task_type", "Tác vụ")) if task else "Tác vụ"
+        burst_time = max(1, self.to_int(self.safe_attr(task, "burst_time", 1), 1))
+
+        executed_time = self.calculate_task_executed_service(result, task_id, now)
+        task_percent = int((executed_time / burst_time) * 100)
+        task_percent = max(0, min(100, task_percent))
+
+        if key == "ROUND ROBIN":
+            text = f"{task_id} - {task_type} (lượt RR)"
+        else:
+            text = f"{task_id} - {task_type}"
+
+        return text, task_percent
+
     def update_algorithm_panel(self, key, result):
         panel = self.algo_panels[key]
         color = panel["color"]
@@ -1912,35 +2066,62 @@ class SimulationFrame(tk.Frame):
         completed_tasks = self.get_completed_tasks_until(result, now)
         total_tasks = len(getattr(result, "tasks", []) or [])
 
-        # Tiến độ theo lượng CPU đã xử lý, không chỉ theo số tác vụ hoàn thành.
-        # Nhờ vậy Round Robin tăng dần ở từng đơn vị thời gian trong mỗi quantum.
+        # Tiến độ tổng của thuật toán, chỉ để hiện ở dòng chữ bên dưới.
         total_burst = sum(
             max(0, self.to_int(self.safe_attr(task, "burst_time", 0), 0))
             for task in (getattr(result, "tasks", []) or [])
         )
         executed_time = self.calculate_executed_service(result, now)
-        percent = int((executed_time / total_burst) * 100) if total_burst else 0
-        percent = max(0, min(100, percent))
+        overall_percent = int((executed_time / total_burst) * 100) if total_burst else 0
+        overall_percent = max(0, min(100, overall_percent))
 
         completed_count = len(completed_tasks)
         remaining_count = max(total_tasks - completed_count, 0)
 
-        if current_block is None:
+        # Lấy block để hiển thị trên thanh.
+        # Nếu đúng thời điểm kết thúc 1 tác vụ, vẫn cho tác vụ đó hiện 100%
+        # rồi tick sau mới chuyển sang tác vụ tiếp theo.
+        display_block = current_block
+
+        if result.gantt_chart:
+            for block in reversed(result.gantt_chart):
+                task_id_check = str(self.safe_attr(block, "task_id", ""))
+                block_end = self.to_int(self.safe_attr(block, "end_time", 0), 0)
+
+                if task_id_check != "IDLE" and now == block_end:
+                    display_block = block
+                    break
+
+        if display_block is None:
             if now >= end_time and end_time > 0:
                 current_text = "Hoàn thành tất cả tác vụ"
+                task_percent = 100
             else:
                 current_text = "Đang chờ tác vụ"
+                task_percent = 0
 
             running_task_id = None
 
         else:
-            task_id = str(self.safe_attr(current_block, "task_id", ""))
+            task_id = str(self.safe_attr(display_block, "task_id", ""))
 
             if task_id == "IDLE":
                 current_text = "IDLE - Chưa có tác vụ đến"
+                task_percent = 0
                 running_task_id = None
+
             else:
                 task = self.task_lookup.get(task_id)
+
+                if task is None:
+                    task = next(
+                        (
+                            item for item in getattr(result, "tasks", []) or []
+                            if str(self.safe_attr(item, "task_id", "")) == task_id
+                        ),
+                        None
+                    )
+
                 task_type = str(self.safe_attr(task, "task_type", "Tác vụ")) if task else "Tác vụ"
                 running_task_id = task_id
 
@@ -1949,22 +2130,42 @@ class SimulationFrame(tk.Frame):
                 else:
                     current_text = f"{task_id} - {task_type}"
 
+                block_start = self.to_int(self.safe_attr(display_block, "start_time", 0), 0)
+                block_end = self.to_int(self.safe_attr(display_block, "end_time", block_start), block_start)
+                block_duration = max(1, block_end - block_start)
+
+                if now >= block_end:
+                    task_percent = 100
+                else:
+                    task_percent = int(((now - block_start) / block_duration) * 100)
+
+                task_percent = max(0, min(100, task_percent))
+
         waiting = self.count_waiting_tasks(result, now, running_task_id)
 
-        # Sửa lỗi hiển thị:
-        # Ba ô thống kê bên dưới panel thuật toán là số lượng tác vụ,
-        # không phải thời gian chạy. Trước đây ô "Tác vụ đã chạy" đang bị gán = now,
-        # nên khi tổng thời gian là 113 thì giao diện hiện nhầm thành 113 tác vụ đã chạy.
         avg_wait, avg_turn = self.calculate_live_metrics(result, now)
 
-        panel["task_label"].config(text=current_text, bg=bg, fg=color)
+        # Nếu bạn đã đổi thanh ngang sang Canvas ở bước trước.
+        if "progress_canvas" in panel:
+            self.update_progress_bar(
+                panel["progress_canvas"],
+                current_text,
+                task_percent,
+                color
+            )
+        else:
+            # Fallback nếu máy bạn vẫn còn dùng task_label cũ.
+            panel["task_label"].config(text=current_text, bg=bg, fg=color)
+
         panel["elapsed_label"].config(text=str(completed_count))
         panel["remain_label"].config(text=str(remaining_count))
         panel["waiting_label"].config(text=str(waiting))
-        panel["progress_label"].config(text=f"Tiến độ: {percent}%", fg=color)
 
-        # Cập nhật liên tục theo các tác vụ đã hoàn thành tại thời điểm hiện tại.
-        # Không còn đợi đến cuối mô phỏng mới hiện Avg Waiting/Turnaround.
+        panel["progress_label"].config(
+            text=f"Tiến độ tác vụ: {task_percent}% | Tổng: {overall_percent}%",
+            fg=color
+        )
+
         panel["avg_wait_label"].config(
             text=f"Avg Waiting Time\n{self.format_number(avg_wait)}"
         )
@@ -1973,6 +2174,7 @@ class SimulationFrame(tk.Frame):
             text=f"Avg Turnaround Time\n{self.format_number(avg_turn)}"
         )
 
+        self.update_idletasks()
 
     def get_completed_tasks_until(self, result, now):
         completed = []
