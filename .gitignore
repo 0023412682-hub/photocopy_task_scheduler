@@ -7,3 +7,4 @@ __pycache__/
 .vscode/
 .idea/
 .photocopy_shared_tasks.json
+.photocopy_simulation_payload.json
